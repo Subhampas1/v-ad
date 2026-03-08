@@ -1,0 +1,72 @@
+{
+  "name": "v-ad-backend",
+  "version": "1.0.0",
+  "description": "AI-powered video generation platform for Indian businesses",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "worker": "tsx src/workers/videoWorker.ts",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write src"
+  },
+  "keywords": [
+    "ai",
+    "video",
+    "generation",
+    "bedrock",
+    "ffmpeg"
+  ],
+  "author": "AiforBharat",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.500.0",
+    "@aws-sdk/client-s3": "^3.500.0",
+    "@aws-sdk/lib-storage": "^3.500.0",
+    "@aws-sdk/s3-request-presigner": "^3.1004.0",
+    "@prisma/client": "^5.7.1",
+    "@supabase/supabase-js": "^2.98.0",
+    "aws-sdk": "^2.1600.0",
+    "axios": "^1.6.5",
+    "bcryptjs": "^2.4.3",
+    "bull": "^4.11.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "fluent-ffmpeg": "^2.1.2",
+    "joi": "^17.11.0",
+    "jsonwebtoken": "^9.0.0",
+    "multer": "^1.4.5-lts.1",
+    "pino": "^8.17.2",
+    "pino-pretty": "^10.3.1",
+    "redis": "^4.6.12",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/bull": "^3.15.9",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/fluent-ffmpeg": "^2.1.24",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/multer": "^1.4.11",
+    "@types/node": "^20.10.6",
+    "@typescript-eslint/eslint-plugin": "^6.17.0",
+    "@typescript-eslint/parser": "^6.17.0",
+    "eslint": "^8.56.0",
+    "nodemon": "^3.0.2",
+    "prettier": "^3.1.1",
+    "prisma": "^5.7.1",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
