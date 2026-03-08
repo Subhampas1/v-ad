@@ -39,7 +39,7 @@ router.get('/', (_req: Request, res: Response) => {
 
 // GET /api/history/:type — filter by type (image | script | video)
 router.get('/:type', (req: Request, res: Response) => {
-    const { type } = req.params;
+    const type = req.params.type as string;
     const valid = ['image', 'script', 'video'];
     if (!valid.includes(type)) {
         res.status(400).json({ error: { message: 'Invalid type', code: 'INVALID_TYPE' } });

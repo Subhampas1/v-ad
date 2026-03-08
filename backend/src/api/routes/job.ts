@@ -8,7 +8,7 @@ const router = express.Router();
 // Get job status
 router.get('/:jobId/status', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { jobId } = req.params;
+    const jobId = req.params.jobId as string;
 
     logger.info(`Fetching status for job: ${jobId}`);
 
@@ -43,7 +43,7 @@ router.get('/stats/queue', async (req: Request, res: Response, next: NextFunctio
 // Poll for job completion (websocket alternative)
 router.post('/:jobId/poll', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { jobId } = req.params;
+    const jobId = req.params.jobId as string;
     const { maxWait = 30000 } = req.body; // Max wait in milliseconds
 
     logger.info(`Polling job: ${jobId}`);
