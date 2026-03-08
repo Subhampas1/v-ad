@@ -1,4 +1,10 @@
 import ffmpeg from 'fluent-ffmpeg';
+import ffmpegStatic from 'ffmpeg-static';
+
+if (ffmpegStatic) {
+  ffmpeg.setFfmpegPath(ffmpegStatic as any);
+}
+
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
