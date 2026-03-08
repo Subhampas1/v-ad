@@ -16,7 +16,7 @@ await fs.mkdir(uploadDir, { recursive: true }).catch(() => { });
 
 const storage = multer.diskStorage({
   destination: uploadDir,
-  filename: (_req, file, cb) => {
+  filename: (_req: any, file: any, cb: any) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, 'img-' + uniqueSuffix + path.extname(file.originalname));
   },
@@ -25,7 +25,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
-  fileFilter: (_req, file, cb) => {
+  fileFilter: (_req: any, file: any, cb: any) => {
     const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedMimes.includes(file.mimetype)) {
       cb(new ApiError('Only JPEG, PNG, and WebP images are allowed', 400, 'INVALID_FILE_TYPE'));
