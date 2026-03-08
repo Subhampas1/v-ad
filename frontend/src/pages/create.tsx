@@ -491,6 +491,7 @@ const Create: NextPage = () => {
                   <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
                     {adFrameUrls.map((url, i) => (
                       <a key={i} href={url} target="_blank" rel="noreferrer" className="flex-none">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={url}
                           alt={`Ad frame ${i + 1}`}

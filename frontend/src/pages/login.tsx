@@ -94,7 +94,7 @@ const Login: NextPage = () => {
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-6">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Link href="/signup" className="text-cyan-400 hover:text-cyan-300 font-medium transition">Sign up</Link>
         </p>
       </motion.div>

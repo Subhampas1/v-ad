@@ -49,7 +49,7 @@ const Dashboard: NextPage = () => {
           <h1 className="text-3xl font-bold text-white tracking-tight">
             Welcome back{user ? `, ${user.name.split(' ')[0]}` : ''}! 👋
           </h1>
-          <p className="text-gray-400 mt-1">Here's your V-AD activity at a glance.</p>
+          <p className="text-gray-400 mt-1">Here&apos;s your V-AD activity at a glance.</p>
         </motion.div>
 
         {/* Stats Grid */}

@@ -87,6 +87,7 @@ export interface GenerateScriptResponse {
   script: Script;
   scriptId: string;
   generatedAt: string;
+  imageAnalysis?: any;
 }
 
 export interface GenerateVideoPayload {
@@ -102,6 +103,8 @@ export interface GenerateVideoPayload {
 export interface GenerateVideoResponse {
   message: string;
   videoUrl?: string;
+  rawVideoUrl?: string;
+  adFrameUrls?: string[];
   jobId?: string;
   status?: string;
   platform: string;
