@@ -32,6 +32,7 @@ await fs.mkdir(videoDir, { recursive: true });
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
+  'https://v-ad.vercel.app',
   process.env.FRONTEND_URL,
 ].filter(Boolean) as string[];
 
