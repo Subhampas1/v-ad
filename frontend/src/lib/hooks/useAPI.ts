@@ -33,6 +33,7 @@ export const useGenerateScript = () => {
 export const useGenerateVideo = () => {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [adFrameUrls, setAdFrameUrls] = useState<string[]>([]);
+  const [sceneVisuals, setSceneVisuals] = useState<any[]>([]);
   const [jobId, setJobId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,10 +43,12 @@ export const useGenerateVideo = () => {
     setError(null);
     setVideoUrl(null);
     setAdFrameUrls([]);
+    setSceneVisuals([]);
     try {
       const result = await videoAPI.generate(payload);
       if (result.videoUrl) setVideoUrl(result.videoUrl);
       if (result.adFrameUrls?.length) setAdFrameUrls(result.adFrameUrls);
+      if (result.sceneVisuals?.length) setSceneVisuals(result.sceneVisuals);
       if (result.jobId) setJobId(result.jobId);
       return result;
     } catch (err) {
@@ -60,11 +63,12 @@ export const useGenerateVideo = () => {
   const reset = useCallback(() => {
     setVideoUrl(null);
     setAdFrameUrls([]);
+    setSceneVisuals([]);
     setJobId(null);
     setError(null);
   }, []);
 
-  return { videoUrl, adFrameUrls, jobId, isLoading, error, generate, reset };
+  return { videoUrl, adFrameUrls, sceneVisuals, jobId, isLoading, error, generate, reset };
 };
 
 

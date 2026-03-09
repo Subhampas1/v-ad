@@ -41,7 +41,7 @@ const Create: NextPage = () => {
 
   const { upload, isLoading: uploading } = useUploadImage();
   const { generate: generateScript, script, imageAnalysis, isLoading: genScript, error: scriptError } = useGenerateScript();
-  const { generate: generateVideo, videoUrl, adFrameUrls, isLoading: genVideo, error: videoError, reset: resetVideo } = useGenerateVideo();
+  const { generate: generateVideo, videoUrl, adFrameUrls, sceneVisuals, isLoading: genVideo, error: videoError, reset: resetVideo } = useGenerateVideo();
   const videoStore = useVideoStore();
 
   // Load history on mount
@@ -114,6 +114,12 @@ const Create: NextPage = () => {
     const cta  = editedScript.cta  || script.callToAction || 'Shop Now';
     const prompt = `${form.businessType} advertisement for ${form.productName}. ${hook} ${editedScript.body} ${cta}`.trim();
 
+    const updatedScript = JSON.parse(JSON.stringify(script));
+    if (updatedScript.scenes && updatedScript.scenes.length > 0) {
+      updatedScript.scenes[0].voiceoverText = hook;
+      updatedScript.callToAction = cta;
+    }
+
     try {
       await generateVideo({
         scriptId: videoStore.scriptId || `script_${Date.now()}`,
@@ -121,6 +127,7 @@ const Create: NextPage = () => {
         platform: form.platform as any,
         businessType: form.businessType,
         productName: form.productName,
+        script: updatedScript,
         hook,
         cta,
         imageAnalysis,
@@ -159,351 +166,202 @@ const Create: NextPage = () => {
           <p className="text-gray-400 mt-1">Upload a product image, generate a script, and create your video.</p>
         </motion.div>
 
-        {/* ── Main Grid ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* ── Main Layout (Single Column) ── */}
+        <div className="max-w-4xl mx-auto space-y-8">
 
-          {/* ═══ LEFT COLUMN ═══ */}
-          <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6">
-
-            {/* 1. Upload Panel */}
-            <motion.div variants={fadeUp} className="glass rounded-2xl overflow-hidden">
-              <SectionHeader icon={<Upload className="w-4 h-4" />} label="1 — Upload Image" done={hasImage} />
-              <div className="p-5">
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`
-                    relative cursor-pointer rounded-xl border-2 border-dashed transition-all duration-200
-                    flex flex-col items-center justify-center text-center min-h-[180px]
-                    ${isDragging ? 'drop-active' : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]'}
-                    ${hasImage ? 'p-3' : 'p-8'}
-                  `}
-                >
-                  <input
-                    ref={fileInputRef} type="file" accept="image/*" className="hidden"
-                    onChange={(e) => onDrop(e.target.files)}
-                  />
-                  {preview ? (
-                    <div className="relative w-full">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={preview} alt="Preview" className="w-full h-48 object-contain rounded-lg" />
-                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur rounded-lg px-2 py-1 flex items-center gap-1.5 text-xs text-green-400">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Ready
+          {/* Stage 1: Upload Product Image */}
+          <motion.div variants={fadeUp} className="glass rounded-2xl overflow-hidden border border-white/10">
+            <SectionHeader icon={<Upload className="w-4 h-4" />} label="1 — Upload Product Image" done={hasImage} />
+            <div className="p-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`
+                      relative cursor-pointer rounded-xl border-2 border-dashed transition-all duration-200
+                      flex flex-col items-center justify-center text-center h-full min-h-[180px]
+                      ${isDragging ? 'drop-active' : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]'}
+                      ${hasImage ? 'p-3' : 'p-8'}
+                    `}
+                  >
+                    <input
+                      ref={fileInputRef} type="file" accept="image/*" className="hidden"
+                      onChange={(e) => onDrop(e.target.files)}
+                    />
+                    {preview ? (
+                      <div className="relative w-full h-full flex flex-col items-center justify-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={preview} alt="Preview" className="max-w-full max-h-48 object-contain rounded-lg" />
                       </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-3">
-                        <ImageIcon className="w-6 h-6 text-gray-400" />
-                      </div>
-                      <p className="text-sm font-medium text-gray-300">Drop your product image here</p>
-                      <p className="text-xs text-gray-500 mt-1">JPEG, PNG, WebP • Max 10MB</p>
-                      <div className="mt-4 px-4 py-1.5 text-xs font-medium text-cyan-400 border border-cyan-500/30 rounded-lg bg-cyan-500/5">
-                        Browse files
-                      </div>
-                    </>
-                  )}
-                </div>
-                {preview && (
-                  <button onClick={() => { setPreview(null); setUploadedFile(null); }}
-                    className="mt-2 text-xs text-gray-500 hover:text-gray-300 transition flex items-center gap-1">
-                    <RefreshCw className="w-3 h-3" /> Change image
-                  </button>
-                )}
-              </div>
-            </motion.div>
-
-            {/* 2. Details Panel */}
-            <motion.div variants={fadeUp} className="glass rounded-2xl overflow-hidden">
-              <SectionHeader icon={<Wand2 className="w-4 h-4" />} label="2 — Ad Details" done={hasScript} />
-              <div className="p-5 space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField label="Business Type" value={form.businessType} onChange={setField('businessType')} placeholder="e.g. Retail, Tech" />
-                  <FormField label="Product Name" value={form.productName} onChange={setField('productName')} placeholder="e.g. SmartPhone X" />
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <SelectField label="Platform" value={form.platform} onChange={setField('platform')} options={[
-                    { value: 'reels', label: '📱 Reels' },
-                    { value: 'youtube', label: '▶️ YouTube' },
-                    { value: 'whatsapp', label: '💬 WhatsApp' },
-                  ]} />
-                  <SelectField label="Language" value={form.language} onChange={setField('language')} options={[
-                    { value: 'en', label: '🇬🇧 English' },
-                    { value: 'hi', label: '🇮🇳 Hindi' },
-                    { value: 'te', label: 'తెలుగు' },
-                    { value: 'ta', label: 'தமிழ்' },
-                    { value: 'kn', label: 'ಕನ್ನಡ' },
-                    { value: 'ml', label: 'മലയാളം' },
-                  ]} />
-                  <SelectField label="Tone" value={form.tone} onChange={setField('tone')} options={[
-                    { value: 'professional', label: '💼 Pro' },
-                    { value: 'casual', label: '😊 Casual' },
-                    { value: 'humorous', label: '😂 Funny' },
-                    { value: 'emotional', label: '❤️ Emotional' },
-                  ]} />
-                </div>
-
-                <button
-                  onClick={handleUploadAndGenerate}
-                  disabled={!hasImage || !form.businessType || !form.productName || genScript || uploading}
-                  className={`
-                    w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2
-                    ${(!hasImage || !form.businessType || !form.productName)
-                      ? 'bg-white/5 text-gray-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-cyan-500 to-violet-600 text-white hover:opacity-90 active:scale-[0.98] shadow-lg'
-                    }
-                  `}
-                >
-                  {(genScript || uploading) ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> {uploading ? 'Uploading...' : 'Generating Script...'}</>
-                  ) : (
-                    <><Wand2 className="w-4 h-4" /> {hasScript ? 'Regenerate Script' : 'Generate Script'}</>
-                  )}
-                </button>
-
-                {scriptError && (
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
-                    <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {scriptError}
+                    ) : (
+                      <>
+                        <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-3">
+                          <ImageIcon className="w-6 h-6 text-gray-400" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-300">Drop your product image here</p>
+                        <p className="text-xs text-gray-500 mt-1">JPEG, PNG, WebP • Max 10MB</p>
+                      </>
+                    )}
                   </div>
-                )}
-              </div>
-            </motion.div>
-
-            {/* History Strip */}
-            {history.length > 0 && (
-              <motion.div variants={fadeUp} className="glass rounded-2xl overflow-hidden">
-                <SectionHeader icon={<Clock className="w-4 h-4" />} label="Recent History" />
-                <div className="p-4 flex gap-3 overflow-x-auto pb-4">
-                  {history.slice(0, 8).map((item) => (
-                    <HistoryThumb key={item.id} item={item} />
-                  ))}
+                  {preview && (
+                    <button onClick={() => { setPreview(null); setUploadedFile(null); }}
+                      className="mt-2 text-xs text-gray-500 hover:text-gray-300 transition flex items-center gap-1">
+                      <RefreshCw className="w-3 h-3" /> Change image
+                    </button>
+                  )}
                 </div>
-              </motion.div>
-            )}
+                <div className="space-y-4 flex flex-col justify-center">
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField label="Business Type" value={form.businessType} onChange={setField('businessType')} placeholder="e.g. Retail, Tech" />
+                    <FormField label="Product Name" value={form.productName} onChange={setField('productName')} placeholder="e.g. SmartPhone X" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <SelectField label="Platform" value={form.platform} onChange={setField('platform')} options={[
+                      { value: 'reels', label: '📱 Reels' },
+                      { value: 'youtube', label: '▶️ YouTube' },
+                      { value: 'whatsapp', label: '💬 WhatsApp' },
+                    ]} />
+                    <SelectField label="Language" value={form.language} onChange={setField('language')} options={[
+                      { value: 'en', label: '🇬🇧 English' },
+                      { value: 'hi', label: '🇮🇳 Hindi' },
+                      { value: 'te', label: 'తెలుగు' },
+                    ]} />
+                    <SelectField label="Tone" value={form.tone} onChange={setField('tone')} options={[
+                      { value: 'professional', label: '💼 Professional' },
+                      { value: 'humorous', label: '😂 Humorous' },
+                    ]} />
+                  </div>
+                  <button
+                    onClick={handleUploadAndGenerate}
+                    disabled={!hasImage || !form.businessType || !form.productName || genScript || uploading}
+                    className={`
+                      w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 mt-2 flex items-center justify-center gap-2
+                      ${(!hasImage || !form.businessType || !form.productName)
+                        ? 'bg-white/5 text-gray-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-cyan-500 to-violet-600 text-white hover:opacity-90 active:scale-[0.98]'
+                      }
+                    `}
+                  >
+                    {(genScript || uploading) ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Generating AI Script...</>
+                    ) : (
+                      <><Sparkles className="w-4 h-4" /> Generate Script</>
+                    )}
+                  </button>
+                   {scriptError && (
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+                      <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {scriptError}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </motion.div>
 
-          {/* ═══ RIGHT COLUMN ═══ */}
-          <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6">
-
-            {/* 3. Script Panel */}
-            <motion.div variants={fadeUp} className="glass rounded-2xl overflow-hidden">
-              <SectionHeader icon={<Sparkles className="w-4 h-4" />} label="3 — Generated Script" done={hasScript} />
+          {/* Stage 2: Generated Script */}
+          {hasScript && (
+            <motion.div variants={fadeUp} className="glass rounded-2xl overflow-hidden border border-white/10">
+              <SectionHeader icon={<Wand2 className="w-4 h-4" />} label="2 — Generated Script" done={hasScript} />
               <div className="p-5">
-                {!hasScript && !genScript && (
-                  <div className="min-h-[200px] flex flex-col items-center justify-center text-center">
-                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-3">
-                      <Sparkles className="w-5 h-5 text-gray-500" />
-                    </div>
-                    <p className="text-sm text-gray-500">Your AI-generated script will appear here</p>
-                  </div>
-                )}
-                {genScript && (
-                  <div className="min-h-[200px] flex flex-col items-center justify-center gap-3">
-                    <div className="w-8 h-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-500 animate-spin" />
-                    <div className="text-center">
-                      <p className="text-sm text-gray-300 font-medium">Analyzing your product image...</p>
-                      <p className="text-xs text-gray-500 mt-1">Nova Lite Vision → Script Generation</p>
-                    </div>
-                  </div>
-                )}
-                <AnimatePresence>
-                  {hasScript && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-                      className="space-y-4"
-                    >
-                      {/* Script title */}
-                      <div className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                        <p className="panel-label mb-1">Title</p>
-                        <p className="text-sm font-semibold text-white">{script?.title}</p>
-                      </div>
-
-                      {/* Image Analysis card — what AI saw */}
-                      {imageAnalysis && (
-                        <div className="px-3 py-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
-                          <p className="panel-label text-cyan-500 mb-2">🔍 What AI sees in your image</p>
-                          <p className="text-xs text-gray-300 mb-2">{imageAnalysis.productDescription}</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                              {imageAnalysis.category}
-                            </span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                              {imageAnalysis.suggestedAdStyle} style
-                            </span>
-                            {imageAnalysis.dominantColors?.slice(0,2).map((c: string) => (
-                              <span key={c} className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-gray-400 border border-white/10">
-                                {c}
-                              </span>
-                            ))}
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                        <p className="text-xs font-semibold text-gray-400 mb-2">Title</p>
+                        <h3 className="text-lg font-bold text-white mb-4">{script?.title}</h3>
+                        {imageAnalysis && (
+                          <div className="mt-4 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
+                            <p className="text-[10px] uppercase font-bold text-cyan-500 mb-1">Vision Analysis</p>
+                            <p className="text-sm text-gray-300">{imageAnalysis.productDescription}</p>
                           </div>
-                        </div>
-                      )}
-
-                      {/* Hook */}
-                      <ScriptTextArea label="🪝 Hook" emoji="Opening lines" value={editedScript.hook}
-                        onChange={(v) => setEditedScript((s) => ({ ...s, hook: v }))} />
-                      {/* Body */}
-                      <ScriptTextArea label="📖 Body" emoji="Main message" value={editedScript.body}
-                        onChange={(v) => setEditedScript((s) => ({ ...s, body: v }))} />
-                      {/* CTA */}
-                      <ScriptTextArea label="🎯 CTA" emoji="Call to action" value={editedScript.cta}
-                        onChange={(v) => setEditedScript((s) => ({ ...s, cta: v }))} />
-
-                      {/* Scene details collapsible */}
-                      <SceneList scenes={script?.scenes || []} />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                        )}
+                      </div>
+                      <button
+                        onClick={handleGenerateVideo}
+                        disabled={genVideo}
+                        className="w-full py-4 rounded-xl bg-gradient-to-r from-violet-500 to-pink-600 text-white font-bold text-sm shadow-lg hover:shadow-violet-500/25 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                      >
+                         {genVideo ? <><Loader2 className="w-4 h-4 animate-spin"/> Processing Visuals & Video...</> : <><Film className="w-4 h-4" /> Start Video Execution</>}
+                      </button>
+                    </div>
+                    <div className="space-y-4">
+                      <ScriptTextArea label="Hook" emoji="🪝" value={editedScript.hook} onChange={v => setEditedScript(s => ({...s, hook: v}))} />
+                      <ScriptTextArea label="Body" emoji="📖" value={editedScript.body} onChange={v => setEditedScript(s => ({...s, body: v}))} />
+                      <ScriptTextArea label="Call to Action" emoji="🎯" value={editedScript.cta} onChange={v => setEditedScript(s => ({...s, cta: v}))} />
+                    </div>
+                 </div>
               </div>
             </motion.div>
+          )}
 
-            {/* 4. Video Panel */}
-            <motion.div variants={fadeUp} className="glass rounded-2xl overflow-hidden">
-              <SectionHeader icon={<Film className="w-4 h-4" />} label="4 — Generated Video" done={hasVideo} />
+          {/* Stage 3: Scene Visuals */}
+          {(genVideo || (sceneVisuals && sceneVisuals.length > 0)) && (
+             <motion.div variants={fadeUp} className="glass rounded-2xl overflow-hidden border border-white/10">
+              <SectionHeader icon={<ImageIcon className="w-4 h-4" />} label="3 — Scene Visuals" done={Boolean(sceneVisuals && sceneVisuals.length > 0)} />
               <div className="p-5">
-                {/* Empty state — no video yet and not loading */}
-                {!hasVideo && !genVideo && (
-                  <div className="min-h-[180px] flex flex-col items-center justify-center text-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                      <Play className="w-5 h-5 text-gray-500" />
-                    </div>
-                    <p className="text-sm text-gray-500">Your video preview will appear here</p>
-                  </div>
-                )}
-
-                {genVideo && (
-                  <div className="min-h-[180px] flex flex-col items-center justify-center gap-4 mb-4">
-                    <div className="relative">
-                      <div className="w-16 h-16 rounded-full border-2 border-violet-500/20 border-t-violet-500 animate-spin" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Film className="w-6 h-6 text-violet-400" />
+                {genVideo && (!sceneVisuals || sceneVisuals.length === 0) ? (
+                   <div className="py-12 flex flex-col items-center justify-center text-center">
+                     <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mb-4" />
+                     <p className="text-white font-medium">Generating AI Scenes & Voiceovers...</p>
+                     <p className="text-gray-400 text-sm mt-2">Titan Image Generator & Amazon Polly are working.</p>
+                   </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {sceneVisuals?.map((scene, i) => (
+                      <div key={i} className="bg-white/5 rounded-xl border border-white/10 overflow-hidden shadow-lg hover:border-cyan-500/30 transition">
+                         {/* eslint-disable-next-line @next/next/no-img-element */}
+                         <img src={scene.imageUrl} alt={`Scene ${scene.sceneNumber}`} className="w-full aspect-square object-cover" />
+                         <div className="p-3 bg-black/40">
+                            <p className="text-xs font-bold text-cyan-400 mb-1">Scene {scene.sceneNumber}</p>
+                            {scene.videoUrl && (
+                              <a href={scene.videoUrl} target="_blank" rel="noreferrer" className="mt-2 text-[10px] text-gray-300 hover:text-white flex items-center gap-1 bg-white/10 px-2 py-1.5 rounded-md justify-center transition">
+                                <Play className="w-3 h-3" /> Play Clip
+                              </a>
+                            )}
+                         </div>
                       </div>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-medium text-gray-300">Generating your video...</p>
-                      <p className="text-xs text-gray-500 mt-1">Nova Reel is working (2–5 min)</p>
-                    </div>
+                    ))}
                   </div>
                 )}
+              </div>
+             </motion.div>
+          )}
 
-                {/* Error banner */}
-                {videoError && !genVideo && (
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 mb-4">
-                    <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {videoError}
+          {/* Stage 4: Generated Ad Video */}
+          {(videoUrl || videoError) && (
+            <motion.div variants={fadeUp} className="glass rounded-2xl overflow-hidden border border-white/10">
+              <SectionHeader icon={<Film className="w-4 h-4" />} label="4 — Generated Ad Video" done={hasVideo} />
+              <div className="p-5">
+                {videoError ? (
+                  <div className="flex items-start gap-2 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" /> {videoError}
                   </div>
-                )}
-
-                <AnimatePresence>
-                  {hasVideo && (
-                    <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4 mb-4">
-                      <div className="relative rounded-xl overflow-hidden bg-black">
-                        <video src={videoUrl!} controls className="w-full max-h-72 rounded-xl" poster={preview || undefined} />
-                        <div className="absolute top-3 left-3 px-2 py-1 rounded-lg bg-green-500/20 border border-green-500/30 text-xs text-green-400 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> Ready
-                        </div>
+                ) : (
+                   <div className="flex flex-col items-center">
+                      <div className="relative w-full max-w-sm mx-auto rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black">
+                        <video src={videoUrl!} controls className="w-full h-auto aspect-[9/16] object-cover" poster={preview || undefined} />
                       </div>
-                      <div className="flex gap-3">
-                        <button
-                          onClick={handleDownload}
-                          className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-medium text-gray-200 flex items-center justify-center gap-2 transition"
-                        >
+                      <div className="flex flex-wrap justify-center gap-3 mt-6 w-full max-w-md">
+                        <button onClick={handleDownload} className="flex-1 min-w-[140px] py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-sm font-semibold text-white flex items-center justify-center gap-2 transition">
                           <Download className="w-4 h-4" /> Download
                         </button>
-                        <button
-                          onClick={() => navigator.share?.({ title: form.productName, url: videoUrl! }).catch(() => {})}
-                          className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 flex items-center justify-center gap-2 transition"
-                        >
-                          <Share2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleGenerateVideo}
-                          disabled={!hasScript || genVideo}
-                          className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-500/80 to-pink-600/80 text-white text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          <RefreshCw className="w-4 h-4" /> Regenerate
-                        </button>
-                        <button
-                          onClick={() => {
+                        <button onClick={() => {
                             resetVideo();
                             videoStore.reset();
                             setPreview(null); setUploadedFile(null);
                             setForm({ businessType: '', productName: '', language: 'en', platform: 'reels', tone: 'professional' });
-                          }}
-                          className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-sm transition"
-                        >
-                          New Ad
+                          }} className="flex-1 min-w-[140px] py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-medium text-gray-300 flex items-center justify-center gap-2 transition">
+                          Create New
                         </button>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* ─── Always-visible Generate Video button ─── */}
-                {!genVideo && !hasVideo && (
-                  <button
-                    onClick={handleGenerateVideo}
-                    disabled={!hasScript}
-                    className={`
-                      w-full py-3 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2
-                      ${!hasScript
-                        ? 'bg-white/5 text-gray-500 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-violet-500 to-pink-600 text-white hover:opacity-90 active:scale-[0.98] shadow-lg shadow-violet-500/20'
-                      }
-                    `}
-                  >
-                    <Film className="w-4 h-4" />
-                    {!hasScript ? 'Generate Script First' : 'Generate Video'}
-                  </button>
+                   </div>
                 )}
-                {genVideo && (
-                  <div className="py-6 px-2 flex flex-col items-center gap-4">
-                    <div className="w-full rounded-full h-1.5 bg-white/[0.06] overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-violet-500 via-pink-500 to-violet-500"
-                        style={{
-                          backgroundSize: '200% 100%',
-                          animation: 'shimmer 2s linear infinite',
-                          width: '60%',
-                        }}
-                      />
-                    </div>
-                    <p className="text-sm text-gray-300 font-medium">Creating your ad...</p>
-                    <p className="text-xs text-gray-500">This usually takes 4–8 minutes</p>
-                    <style>{`
-                      @keyframes shimmer {
-                        0%   { background-position: 200% 0; }
-                        100% { background-position: -200% 0; }
-                      }
-                    `}</style>
-                  </div>
-                )}
-
               </div>
-
-              {/* ─── Ad Frames Carousel ─── */}
-              {adFrameUrls.length > 0 && (
-                <div className="px-5 pb-5">
-                  <p className="panel-label text-violet-400 mb-2">🎨 Nova Canvas Ad Frames ({adFrameUrls.length})</p>
-                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-                    {adFrameUrls.map((url, i) => (
-                      <a key={i} href={url} target="_blank" rel="noreferrer" className="flex-none">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={url}
-                          alt={`Ad frame ${i + 1}`}
-                          className="h-20 w-36 object-cover rounded-lg border border-white/10 hover:border-violet-500/40 transition"
-                        />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
             </motion.div>
-          </motion.div>
+          )}
+
         </div>
       </div>
     </Layout>

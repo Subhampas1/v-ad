@@ -98,6 +98,11 @@ export interface GenerateVideoPayload {
   productName: string;
   musicPath?: string;
   watermarkText?: string;
+  hook?: string;
+  cta?: string;
+  imageAnalysis?: any;
+  prompt?: string;
+  script?: any;
 }
 
 export interface GenerateVideoResponse {
@@ -105,6 +110,11 @@ export interface GenerateVideoResponse {
   videoUrl?: string;
   rawVideoUrl?: string;
   adFrameUrls?: string[];
+  sceneVisuals?: {
+    sceneNumber: number;
+    imageUrl: string;
+    videoUrl: string;
+  }[];
   jobId?: string;
   status?: string;
   platform: string;
