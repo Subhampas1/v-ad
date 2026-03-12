@@ -43,11 +43,14 @@ async function uploadToS3(
     body = source;
   }
 
+  const filename = key.split('/').pop() || 'video.mp4';
+
   await s3.send(new PutObjectCommand({
     Bucket: bucket,
     Key: key,
     Body: body,
     ContentType: contentType,
+    ContentDisposition: `inline; filename="${filename}"`
   }));
   return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 }
@@ -79,13 +82,17 @@ router.post('/generate', async (req: Request, res: Response, next: NextFunction)
 
     logger.info(`━━ Starting Ad Generation Pipeline (Job: ${jobId})`);
 
+    // If the frontend sends imagePath, it's the S3 URL of the uploaded image
+    const imageUrl = (input as any).imagePath;
+
     const result = await generateAd({
       productName,
       businessType,
       platform: input.platform,
       language,
-      duration: 15
-    }, jobId, uploadFrameToS3, uploadVideoFileToS3);
+      duration: 15,
+      imageUrl // Pass the image URL down to the generator
+    }, jobId, uploadFrameToS3, uploadVideoFileToS3, input.script);
 
     logger.info(`━━ ✅ Pipeline complete. Final video: ${result.finalVideoUrl}`);
 

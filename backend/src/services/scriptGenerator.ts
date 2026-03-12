@@ -9,6 +9,7 @@ export interface ScriptGenerationInput {
   tone?: 'professional' | 'casual' | 'humorous' | 'emotional';
   duration?: 15 | 30 | 60;
   productContext?: string; // Injected from image analysis — describes what AI sees
+  imageUrl?: string;
 }
 
 export interface GeneratedScript {
@@ -60,7 +61,7 @@ Generate ONLY a valid JSON object (no markdown, no code blocks) with exactly thi
     }
   ],
   "audioSuggestion": "string - type of background audio",
-  "background": "string - overall visual aesthetic",
+  "background": "string - EXACT text-to-image prompt for the background. MUST be a professional product studio photography background. MUST NOT contain any people, faces, animals, or characters. e.g., 'minimalist tech podium with neon blue lighting, dark background, 8k resolution, cinematic blur'",
   "callToAction": "string - CTA in ${input.language}",
   "estimatedDuration": number
 }

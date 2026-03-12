@@ -140,10 +140,35 @@ const Create: NextPage = () => {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!videoUrl) return;
-    const a = document.createElement('a');
-    a.href = videoUrl; a.download = `${form.productName || 'ad'}_video.mp4`; a.click();
+    try {
+      toast.loading('Preparing your video...', { id: 'download-video' });
+      const response = await fetch(videoUrl);
+      if (!response.ok) throw new Error('Failed to fetch video');
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `${form.productName ? form.productName.replace(/[^a-zA-Z0-9]/g, '_') : 'ad'}_video.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+
+      toast.success('Download started!', { id: 'download-video' });
+    } catch (err) {
+      console.error("Direct fetch failed, falling back to link click", err);
+      toast.dismiss('download-video');
+
+      const a = document.createElement('a');
+      a.href = videoUrl;
+      a.target = "_blank";
+      a.download = `${form.productName || 'ad'}_video.mp4`;
+      a.click();
+    }
   };
 
   const setField = (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
