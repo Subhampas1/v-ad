@@ -24,10 +24,6 @@
         "src/*"
       ]
     },
-    "types": [
-      "node",
-      "fluent-ffmpeg"
-    ]
   },
   "ts-node": {
     "esm": true,
