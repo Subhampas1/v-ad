@@ -14,7 +14,7 @@ export const mergeVideos = async (
                 console.log("video merged successfully to", output);
                 resolve(output);
             })
-            .on("error", (e) => {
+            .on("error", (e: Error) => {
                 console.error("error merging videos", e);
                 reject(e);
             })

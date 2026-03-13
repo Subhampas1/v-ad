@@ -50,14 +50,14 @@ export function renderCinematicAd(inputs: CinematicRenderInputs, outputPath: str
                 "-movflags +faststart"
             ])
             .save(outputPath)
-            .on("start", (cmd) => {
+            .on("start", (cmd: string) => {
                 logger.info(`FFmpeg Rendering Command: ${cmd}`);
             })
             .on("end", () => {
                 logger.info(`Cinematic ad video completely rendered → ${outputPath}`);
                 resolve(outputPath);
             })
-            .on("error", (err) => {
+            .on("error", (err: Error) => {
                 logger.error("Error rendering cinematic ad", { err });
                 reject(err);
             });

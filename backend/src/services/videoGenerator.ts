@@ -312,9 +312,9 @@ export const addTextOverlaysAndUpload = async (input: OverlayInput): Promise<str
       .audioCodec('copy')
       .outputOptions(['-preset fast', '-crf 23', '-movflags +faststart'])
       .output(tmpOutput)
-      .on('start', (cmd: any) => logger.info(`FFmpeg command: ${cmd.slice(0, 120)}...`))
+      .on('start', (cmd: string) => logger.info(`FFmpeg command: ${cmd.slice(0, 120)}...`))
       .on('end', () => { logger.info('✅ FFmpeg overlay complete'); resolve(); })
-      .on('error', (err: any) => { logger.error({ err }, 'FFmpeg overlay failed'); reject(err); })
+      .on('error', (err: Error) => { logger.error({ err }, 'FFmpeg overlay failed'); reject(err); })
       .run();
   });
 
@@ -362,7 +362,7 @@ export const compressVideo = async (
           logger.info(`✅ Video compressed: ${outputPath}`);
           resolve(outputPath);
         })
-        .on('error', (err: any) => {
+        .on('error', (err: Error) => {
           logger.error(`❌ Compression error: ${err.message}`);
           reject(new Error(`Compression failed: ${err.message}`));
         })
@@ -376,7 +376,7 @@ export const compressVideo = async (
 
 export const getVideoMetadata = async (videoPath: string): Promise<any> => {
   return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(videoPath, (err: any, data: any) => {
+    ffmpeg.ffprobe(videoPath, (err: Error | null, data: any) => {
       if (err) {
         logger.error('Metadata extraction error:', err);
         reject(err);

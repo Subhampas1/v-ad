@@ -23,7 +23,7 @@ export function mergeAudio(videoPath: string, voicePath: string, outputPath: str
                 logger.info(`Successfully merged final video, saved to: ${outputPath}`);
                 resolve(outputPath);
             })
-            .on("error", (err) => {
+            .on("error", (err: Error) => {
                 logger.error("Error merging final video", { err });
                 reject(err);
             });

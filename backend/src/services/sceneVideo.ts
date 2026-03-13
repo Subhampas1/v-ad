@@ -34,6 +34,6 @@ export const createSceneVideo = async (
         command
             .save(outputPath)
             .on("end", () => resolve(outputPath))
-            .on("error", (err) => reject(err));
+            .on("error", (err: Error) => reject(err));
     });
 };
