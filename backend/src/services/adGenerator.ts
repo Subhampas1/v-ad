@@ -2,23 +2,23 @@ import fs from "fs/promises";
 import fsSync from "fs";
 import { generateScript, ScriptGenerationInput } from "./scriptGenerator.js";
 import { prepareImageForReplaceBackground } from "./imageProcessing.js";
-import { createTextOverlay } from "./textOverlay.js";
+import {
+  createBrandLayer,
+  createHookLayer,
+  createSupportLayer,
+  createCTALayer,
+  createTopGradient,
+} from "./textOverlay.js";
 import { renderCinematicAd } from "./videoRenderer.js";
 import { replaceBackground } from "./clipdropEditor.js";
 import { generateVoice } from "./generateVoice.js";
 import { mergeAudio } from "./finalVideo.js";
 import path from "path";
 import { logger } from "../utils/logger.js";
-// 📌 CLEANUP: removed `node-fetch` import — Node 18+ has native fetch built-in
-//    (also removes the need for the `node-fetch` package dependency)
 
 export interface AdGenerationResult {
   script: any;
-  sceneVisuals: {
-    sceneNumber: number;
-    imageUrl: string;
-    videoUrl: string;
-  }[];
+  sceneVisuals: { sceneNumber: number; imageUrl: string; videoUrl: string }[];
   finalVideoUrl: string;
 }
 
@@ -30,111 +30,96 @@ export const generateAd = async (
   existingScript?: any,
   rawImagePath?: string
 ): Promise<AdGenerationResult> => {
+  logger.info(`Starting Ad Generation Pipeline for job ${jobId}`);
 
-  logger.info(`Starting Hackathon AI Ad Generation Pipeline for job ${jobId}`);
-
-  // 1. Generate or Use Existing Script
   const script = existingScript || await generateScript(input);
 
   const tempDir = path.join(process.env.VIDEO_OUTPUT_DIR || "./videos", jobId);
   await fs.mkdir(tempDir, { recursive: true });
 
-  // Download/copy original image
+  // Asset paths
   const localProductImagePath = path.join(tempDir, "product_raw.png");
-  if (rawImagePath && fsSync.existsSync(rawImagePath)) {
-    await fs.copyFile(rawImagePath, localProductImagePath);
-  } else if (input.imageUrl) {
-    logger.info(`Downloading product image from URL: ${input.imageUrl}`);
-    // 📌 Using native fetch (Node 18+) instead of node-fetch package
-    const res = await fetch(input.imageUrl);
-    const buffer = await res.arrayBuffer();
-    await fs.writeFile(localProductImagePath, Buffer.from(buffer));
-  } else {
-    throw new Error("No image source provided for ad generator.");
-  }
-
-  // Pipeline Asset Paths
-  const productPadded = path.join(tempDir, "product_padded.png");
-  const textBrandPath = path.join(tempDir, "text_brand.png");
-  const textHookPath  = path.join(tempDir, "text_hook.png");
-  const textCTAPath   = path.join(tempDir, "text_cta.png");
-  const videoOutput   = path.join(tempDir, "ad_base.mp4");
-  const background    = path.join(tempDir, "generated_bg.jpg");
-
-  // Path for the final merged video (stored outside tempDir so cleanup is safe)
+  const productPadded   = path.join(tempDir, "product_padded.png");
+  const background      = path.join(tempDir, "generated_bg.jpg");
+  const gradientPath    = path.join(tempDir, "gradient_top.png");
+  const textBrandPath   = path.join(tempDir, "text_brand.png");
+  const textHookPath    = path.join(tempDir, "text_hook.png");
+  const textSupportPath = path.join(tempDir, "text_support.png");
+  const textCTAPath     = path.join(tempDir, "text_cta.png");
+  const videoOutput     = path.join(tempDir, "ad_base.mp4");
   const finalLocalVideoPath = path.join(
     process.env.VIDEO_OUTPUT_DIR || "./videos",
     `${jobId}.mp4`
   );
 
   try {
-    // Step 1: Prepare product on 1080x1920 canvas
+    // ── 1. Obtain product image ─────────────────────────────────────────────
+    if (rawImagePath && fsSync.existsSync(rawImagePath)) {
+      await fs.copyFile(rawImagePath, localProductImagePath);
+    } else if (input.imageUrl) {
+      logger.info(`Downloading product image from: ${input.imageUrl}`);
+      const res = await fetch(input.imageUrl);
+      const buffer = await res.arrayBuffer();
+      await fs.writeFile(localProductImagePath, Buffer.from(buffer));
+    } else {
+      throw new Error("No image source provided.");
+    }
+
+    // ── 2. Prepare product + generate AI background ─────────────────────────
     await prepareImageForReplaceBackground(localProductImagePath, productPadded);
 
-    // Step 2: Dynamic Integrated Background Generation via ClipDrop
     const aiPrompt = `${script.background || "luxury product photography background"}, professional commercial product photography studio background, soft cinematic lighting, 8k resolution`;
-    logger.info(`Generating dynamic AI ad photo with prompt: "${aiPrompt}"`);
+    logger.info(`Generating AI background: "${aiPrompt}"`);
     try {
       await replaceBackground(productPadded, background, aiPrompt);
     } catch (err) {
-      logger.error("Dynamic integrated background generation failed.");
+      logger.error("ClipDrop background generation failed.");
       throw new Error("Failed to generate integrated ad frame from Clipdrop.");
     }
 
-    // Step 3: Generate Marketing Text Layers
-    const brandName = input.productName || input.businessType || "Premium Brand";
-    const hook = script.scenes?.[0]?.voiceoverText || "NEW COLLECTION";
-    const cta  = script.callToAction || "SHOP NOW";
+    // ── 3. Generate all text layers ─────────────────────────────────────────
+    // Copy text to adhere to the spec: short, punchy, hierarchy
+    const brandName   = (input.productName || input.businessType || "Brand").toUpperCase();
+    const hook        = trimToWords(script.scenes?.[0]?.voiceoverText || "NEW COLLECTION", 6);
+    const supportLine = trimToWords(script.scenes?.[1]?.voiceoverText || "Premium quality guaranteed", 8);
+    const cta         = script.callToAction || "SHOP NOW";
 
-    await createTextOverlay(textBrandPath, {
-      text: brandName,
-      width: 1080,
-      height: 160,
-      fontSize: 90,
-      fontColor: "#FFFFFF",
-    });
+    logger.info(`Text layers — Brand: "${brandName}" | Hook: "${hook}" | Support: "${supportLine}" | CTA: "${cta}"`);
 
-    await createTextOverlay(textHookPath, {
-      text: hook,
-      width: 1080,
-      height: 150,
-      fontSize: 50,
-      fontColor: "#FFFFFF",
-    });
+    await Promise.all([
+      createTopGradient(gradientPath),
+      createBrandLayer(textBrandPath, brandName),
+      createHookLayer(textHookPath, hook),
+      createSupportLayer(textSupportPath, supportLine),
+      createCTALayer(textCTAPath, cta),
+    ]);
 
-    await createTextOverlay(textCTAPath, {
-      text: cta,
-      width: 600,
-      height: 160,
-      fontSize: 60,
-      fontColor: "#FFFFFF",
-      isCTA: true,
-    });
-
-    // Upload the generated background as preview frame
+    // ── 4. Upload background as preview frame ───────────────────────────────
     const rawImageBuffer = await fs.readFile(background);
-    const imageKey = `frames/${jobId}/scene-1.png`;
+    const imageKey = `frames/${jobId}/scene-1.jpg`;
     const imageUrl = await uploadFrameToS3(rawImageBuffer.toString("base64"), imageKey);
 
-    // Step 4: Render Cinematic Multi-Layer Video
+    // ── 5. Render cinematic video ────────────────────────────────────────────
     await renderCinematicAd(
       {
-        bg:        background,
-        textBrand: textBrandPath,
-        textHook:  textHookPath,
-        textCTA:   textCTAPath,
+        bg:          background,
+        gradient:    gradientPath,
+        textBrand:   textBrandPath,
+        textHook:    textHookPath,
+        textSupport: textSupportPath,
+        textCTA:     textCTAPath,
       },
       videoOutput
     );
 
-    // Step 5: Generate Voiceover and merge with video
+    // ── 6. Voiceover + merge ─────────────────────────────────────────────────
     const fullVoiceText =
-      script.scenes?.map((s: any) => s.voiceoverText).join(" ") + " " + cta;
+      script.scenes?.map((s: any) => s.voiceoverText).join(" ") + ". " + cta;
     const voicePath = path.join(tempDir, "voice.mp3");
     await generateVoice(fullVoiceText, voicePath);
     await mergeAudio(videoOutput, voicePath, finalLocalVideoPath);
 
-    // Step 6: Upload Final Video to S3
+    // ── 7. Upload final video ────────────────────────────────────────────────
     const finalKey = `videos/${jobId}/final.mp4`;
     const finalVideoUrl = await uploadVideoToS3(finalLocalVideoPath, finalKey);
 
@@ -144,16 +129,16 @@ export const generateAd = async (
       finalVideoUrl,
     };
   } finally {
-    // 📌 DISK LEAK FIX: Always clean up the temp job directory and the local
-    //    merged video after upload, even if an error occurred mid-pipeline.
-    //    Without this, Render's ephemeral disk (< 512 MB on free tier) fills
-    //    up quickly across jobs and causes OOM / ENOSPC crashes.
+    // ── Cleanup: always remove temp job dir to prevent disk exhaustion ──────
     logger.info(`Cleaning up temp directory: ${tempDir}`);
-    await fs.rm(tempDir, { recursive: true, force: true }).catch((err) =>
-      logger.warn(`Failed to remove tempDir ${tempDir}: ${err.message}`)
+    await fs.rm(tempDir, { recursive: true, force: true }).catch((e) =>
+      logger.warn(`Cleanup failed for ${tempDir}: ${e.message}`)
     );
-    await fs.rm(finalLocalVideoPath, { force: true }).catch((err) =>
-      logger.warn(`Failed to remove finalLocalVideoPath ${finalLocalVideoPath}: ${err.message}`)
-    );
+    await fs.rm(finalLocalVideoPath, { force: true }).catch(() => null);
   }
 };
+
+/** Trim a string to at most N words */
+function trimToWords(text: string, maxWords: number): string {
+  return text.split(/\s+/).slice(0, maxWords).join(" ");
+}
