@@ -4,10 +4,7 @@ import { generateScript, ScriptGenerationInput } from "./scriptGenerator.js";
 import { prepareImageForReplaceBackground } from "./imageProcessing.js";
 import {
   createBrandLayer,
-  createHookLayer,
-  createSupportLayer,
   createCTALayer,
-  createTopGradient,
 } from "./textOverlay.js";
 import { renderCinematicAd } from "./videoRenderer.js";
 import { replaceBackground } from "./clipdropEditor.js";
@@ -41,10 +38,7 @@ export const generateAd = async (
   const localProductImagePath = path.join(tempDir, "product_raw.png");
   const productPadded   = path.join(tempDir, "product_padded.png");
   const background      = path.join(tempDir, "generated_bg.jpg");
-  const gradientPath    = path.join(tempDir, "gradient_top.png");
   const textBrandPath   = path.join(tempDir, "text_brand.png");
-  const textHookPath    = path.join(tempDir, "text_hook.png");
-  const textSupportPath = path.join(tempDir, "text_support.png");
   const textCTAPath     = path.join(tempDir, "text_cta.png");
   const videoOutput     = path.join(tempDir, "ad_base.mp4");
   const finalLocalVideoPath = path.join(
@@ -77,20 +71,14 @@ export const generateAd = async (
       throw new Error("Failed to generate integrated ad frame from Clipdrop.");
     }
 
-    // ── 3. Generate all text layers ─────────────────────────────────────────
-    // Copy text to adhere to the spec: short, punchy, hierarchy
-    const brandName   = (input.productName || input.businessType || "Brand").toUpperCase();
-    const hook        = trimToWords(script.scenes?.[0]?.voiceoverText || "NEW COLLECTION", 6);
-    const supportLine = trimToWords(script.scenes?.[1]?.voiceoverText || "Premium quality guaranteed", 8);
-    const cta         = script.callToAction || "SHOP NOW";
+    // ── 3. Generate text layers (brand + CTA only) ─────────────────────────
+    const brandName = (input.productName || input.businessType || "Brand");
+    const cta       = script.callToAction || "Shop Now";
 
-    logger.info(`Text layers — Brand: "${brandName}" | Hook: "${hook}" | Support: "${supportLine}" | CTA: "${cta}"`);
+    logger.info(`Text — Brand: "${brandName}" | CTA: "${cta}"`);
 
     await Promise.all([
-      createTopGradient(gradientPath),
       createBrandLayer(textBrandPath, brandName),
-      createHookLayer(textHookPath, hook),
-      createSupportLayer(textSupportPath, supportLine),
       createCTALayer(textCTAPath, cta),
     ]);
 
@@ -99,15 +87,12 @@ export const generateAd = async (
     const imageKey = `frames/${jobId}/scene-1.jpg`;
     const imageUrl = await uploadFrameToS3(rawImageBuffer.toString("base64"), imageKey);
 
-    // ── 5. Render cinematic video ────────────────────────────────────────────
+    // ── 5. Render video (brand + CTA composited via Sharp) ──────────────────
     await renderCinematicAd(
       {
-        bg:          background,
-        gradient:    gradientPath,
-        textBrand:   textBrandPath,
-        textHook:    textHookPath,
-        textSupport: textSupportPath,
-        textCTA:     textCTAPath,
+        bg:        background,
+        textBrand: textBrandPath,
+        textCTA:   textCTAPath,
       },
       videoOutput
     );
