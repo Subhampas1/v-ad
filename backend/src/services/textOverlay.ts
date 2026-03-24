@@ -44,19 +44,19 @@ export async function createBrandLayer(
 ): Promise<void> {
   logger.info(`Creating BRAND layer: "${text}"`);
   const w = AD_W;
-  const h = 120;
+  const h = 160;
 
   const svg = `
 <svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="s"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.6"/></filter>
+    <filter id="s"><feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000" flood-opacity="0.7"/></filter>
   </defs>
   <text
-    x="50%" y="50%"
+    x="50%" y="52%"
     text-anchor="middle" dominant-baseline="central"
-    font-family="${FONT}" font-size="54" font-weight="400"
-    letter-spacing="6" fill="#FFFFFF" filter="url(#s)"
-  >${escapeXml(text.toUpperCase())}</text>
+    font-family="${FONT}" font-size="80" font-weight="900"
+    letter-spacing="2" fill="#FFFFFF" filter="url(#s)"
+  >${escapeXml(text)}</text>
 </svg>`;
 
   await sharp(Buffer.from(svg)).png().toFile(outputPath);
@@ -72,11 +72,10 @@ export async function createHookLayer(
 ): Promise<void> {
   logger.info(`Creating HOOK layer: "${text}"`);
   const w = AD_W;
-  const h = 260;
+  const h = 200;
 
-  // Hard-wrap at 12 chars for 2-line support
-  const lines = wrapText(text, 14);
-  const lineH = 110;
+  const lines = wrapText(text, 10);
+  const lineH = 80;
   const totalH = lines.length * lineH;
   const startY = (h - totalH) / 2 + lineH / 2;
 
@@ -86,8 +85,8 @@ export async function createHookLayer(
   <text
     x="50%" y="${startY + i * lineH}"
     text-anchor="middle" dominant-baseline="central"
-    font-family="${FONT}" font-size="96" font-weight="900"
-    letter-spacing="2" fill="#FFFFFF" filter="url(#s)"
+    font-family="${FONT}" font-size="58" font-weight="600"
+    letter-spacing="1" fill="#FFFFFF" filter="url(#s)"
   >${escapeXml(line)}</text>`
     )
     .join("");
@@ -95,7 +94,7 @@ export async function createHookLayer(
   const svg = `
 <svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="s"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.75"/></filter>
+    <filter id="s"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.75"/></filter>
   </defs>
   ${textEls}
 </svg>`;
@@ -140,26 +139,26 @@ export async function createCTALayer(
   text: string
 ): Promise<void> {
   logger.info(`Creating CTA layer: "${text}"`);
-  const w = 600;
-  const h = 140;
+  const w = 560;
+  const h = 130;
 
   const svg = `
 <svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <filter id="btn-shadow">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.45"/>
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.5"/>
     </filter>
   </defs>
-  <!-- Pill background -->
-  <rect x="10" y="10" width="${w - 20}" height="${h - 20}"
-    rx="60" ry="60" fill="#FFB800" filter="url(#btn-shadow)"/>
+  <!-- Pill background — rust-orange matching reference image -->
+  <rect x="8" y="8" width="${w - 16}" height="${h - 16}"
+    rx="55" ry="55" fill="#E05C14" filter="url(#btn-shadow)"/>
   <!-- Button text -->
   <text
     x="50%" y="54%"
     text-anchor="middle" dominant-baseline="central"
-    font-family="${FONT}" font-size="68" font-weight="900"
-    letter-spacing="3" fill="#1A1A1A"
-  >${escapeXml(text.toUpperCase())}</text>
+    font-family="${FONT}" font-size="62" font-weight="900"
+    letter-spacing="2" fill="#FFFFFF"
+  >${escapeXml(text)}</text>
 </svg>`;
 
   await sharp(Buffer.from(svg)).png().toFile(outputPath);

@@ -52,28 +52,27 @@ export function renderCinematicAd(
         // ── BG: scale + crop to 1080×1920 ─────────────────────────────────
         `[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1[bg]`,
 
-        // ── Dark gradient strip over top 700px (readability) ──────────────
+        // ── Dark gradient strip over top 600px (readability) ──────────────
         // Fades in over 1s starting at 0.8s
         `[1:v]fade=t=in:st=0.6:d=1.0:alpha=1[grad]`,
         `[bg][grad]overlay=x=0:y=0[s0]`,
 
-        // ── Brand name: fade in at 0.8s ───────────────────────────────────
+        // ── Brand name: y=80, fade in at 0.8s ────────────────────────────
         `[2:v]fade=t=in:st=0.8:d=0.8:alpha=1[brand]`,
-        `[s0][brand]overlay=x='(main_w-overlay_w)/2':y=120[s1]`,
+        `[s0][brand]overlay=x='(main_w-overlay_w)/2':y=80[s1]`,
 
-        // ── Hook: fade in at 1.6s ─────────────────────────────────────────
+        // ── Hook: y=260, fade in at 1.6s ─────────────────────────────────
         `[3:v]fade=t=in:st=1.6:d=1.0:alpha=1[hook]`,
-        `[s1][hook]overlay=x='(main_w-overlay_w)/2':y=300[s2]`,
+        `[s1][hook]overlay=x='(main_w-overlay_w)/2':y=260[s2]`,
 
-        // ── Support line: fade in at 4.0s ─────────────────────────────────
+        // ── Support line: y=470, fade in at 4.0s ─────────────────────────
         `[4:v]fade=t=in:st=4.0:d=1.0:alpha=1[support]`,
-        `[s2][support]overlay=x='(main_w-overlay_w)/2':y=580[s3]`,
+        `[s2][support]overlay=x='(main_w-overlay_w)/2':y=470[s3]`,
 
-        // ── CTA button: fade in at 9.0s then pulse brightness ─────────────
-        // Pulse: brightness oscillates ±10% at 1.5Hz via sine on luma eq
+        // ── CTA button: y=1760 (very bottom), fade in at 9.0s + pulse ────
         `[5:v]fade=t=in:st=9.0:d=0.8:alpha=1,` +
-          `eq=brightness='0.08*sin(2*PI*1.5*t)':enable='gte(t\\,9.8)'[cta]`,
-        `[s3][cta]overlay=x='(main_w-overlay_w)/2':y=1640[final]`,
+          `eq=brightness='0.08*sin(2*PI*1.5*t)':enable='gte(t\,9.8)'[cta]`,
+        `[s3][cta]overlay=x='(main_w-overlay_w)/2':y=1760[final]`,
       ])
 
       .map("[final]")
