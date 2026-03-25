@@ -62,7 +62,9 @@ export const generateAd = async (
     // ── 2. Prepare product + generate AI background ─────────────────────────
     await prepareImageForReplaceBackground(localProductImagePath, productPadded);
 
-    const aiPrompt = `${script.background || "luxury product photography background"}, professional commercial product photography studio background, soft cinematic lighting, 8k resolution`;
+    // Detect whether the product is worn by a human or is object-only,
+    // and pick an appropriate ClipDrop background prompt.
+    const aiPrompt = buildBackgroundPrompt(input, script);
     logger.info(`Generating AI background: "${aiPrompt}"`);
     try {
       await replaceBackground(productPadded, background, aiPrompt);
@@ -71,15 +73,16 @@ export const generateAd = async (
       throw new Error("Failed to generate integrated ad frame from Clipdrop.");
     }
 
-    // ── 3. Generate text layers (brand + CTA only) ─────────────────────────
+    // ── 3. Generate text layers ─────────────────────────────────────────────
     const brandName = (input.productName || input.businessType || "Brand");
-    const cta       = script.callToAction || "Shop Now";
+    // CTA is always "Shop Now" — never use the long script callToAction
+    const CTA_TEXT  = "Shop Now";
 
-    logger.info(`Text — Brand: "${brandName}" | CTA: "${cta}"`);
+    logger.info(`Text — Brand: "${brandName}"`);
 
     await Promise.all([
       createBrandLayer(textBrandPath, brandName),
-      createCTALayer(textCTAPath, cta),
+      createCTALayer(textCTAPath, CTA_TEXT),
     ]);
 
     // ── 4. Upload background as preview frame ───────────────────────────────
@@ -99,7 +102,7 @@ export const generateAd = async (
 
     // ── 6. Voiceover + merge ─────────────────────────────────────────────────
     const fullVoiceText =
-      script.scenes?.map((s: any) => s.voiceoverText).join(" ") + ". " + cta;
+      script.scenes?.map((s: any) => s.voiceoverText).join(" ") + ". " + CTA_TEXT;
     const voicePath = path.join(tempDir, "voice.mp3");
     await generateVoice(fullVoiceText, voicePath);
     await mergeAudio(videoOutput, voicePath, finalLocalVideoPath);
@@ -126,4 +129,47 @@ export const generateAd = async (
 /** Trim a string to at most N words */
 function trimToWords(text: string, maxWords: number): string {
   return text.split(/\s+/).slice(0, maxWords).join(" ");
+}
+
+/**
+ * Picks a ClipDrop background prompt based on whether the product
+ * is worn by a human model or is a standalone object.
+ *
+ * Rules:
+ *  - Keywords suggesting person/model → adaptive lifestyle background
+ *  - Everything else → clean studio with podium
+ */
+function buildBackgroundPrompt(input: any, script: any): string {
+  const HUMAN_KEYWORDS = [
+    "wear", "worn", "model", "man", "woman", "person", "boy", "girl",
+    "outfit", "dress", "shirt", "jacket", "hoodie", "pants", "jeans",
+    "clothing", "fashion", "apparel", "t-shirt", "tshirt", "kurta",
+    "saree", "lehenga", "suit", "blazer", "coat", "sweater", "human",
+  ];
+
+  const haystack = [
+    input.productName   ?? "",
+    input.businessType  ?? "",
+    input.productDescription ?? "",
+    script?.background  ?? "",
+    script?.scenes?.[0]?.description ?? "",
+  ].join(" ").toLowerCase();
+
+  const hasHuman = HUMAN_KEYWORDS.some((kw) => haystack.includes(kw));
+
+  if (hasHuman) {
+    // Lifestyle / adaptive background for model-worn clothing
+    return (
+      `${script?.background || "modern lifestyle background"},` +
+      ` cinematic urban or natural environment, soft directional lighting,` +
+      ` professional fashion photography, shallow depth of field, 8k resolution`
+    );
+  } else {
+    // Studio podium for standalone product
+    return (
+      `${script?.background || "luxury product photography"},` +
+      ` clean professional studio, elevated circular podium, soft cinematic lighting,` +
+      ` dramatic dark background, sharp product focus, 8k resolution`
+    );
+  }
 }
