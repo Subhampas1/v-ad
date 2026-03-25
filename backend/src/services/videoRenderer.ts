@@ -66,10 +66,9 @@ export async function renderCinematicAd(
       .complexFilter([
         // Scale bg to exact output resolution
         `[0:v]scale=${AD_W}:${AD_H},setsar=1[bg]`,
-        // Blink: full alpha for first half of each period, zero for second half
-        `[1:v]colorchannelmixer=aa='if(lt(mod(t,${blinkPeriod}),${(1 / BLINK_HZ / 2).toFixed(3)}),1,0)'[cta_blink]`,
-        // Overlay CTA at bottom-center
-        `[bg][cta_blink]overlay=x=${ctaLeft}:y=${ctaTop}[out]`,
+        // Blink: overlay CTA only during the ON half of each period
+        // overlay `enable` is evaluated per-frame — no alpha manipulation needed
+        `[bg][1:v]overlay=x=${ctaLeft}:y=${ctaTop}:enable='lt(mod(t,${blinkPeriod}),${(1 / BLINK_HZ / 2).toFixed(3)})'[out]`,
       ])
       .map("[out]")
       .outputOptions([
