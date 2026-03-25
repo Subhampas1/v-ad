@@ -24,6 +24,9 @@
         "src/*"
       ]
     },
+    "types": [
+      "node"
+    ]
   },
   "ts-node": {
     "esm": true,
