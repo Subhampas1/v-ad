@@ -126,10 +126,7 @@ export const generateAd = async (
   }
 };
 
-/** Trim a string to at most N words */
-function trimToWords(text: string, maxWords: number): string {
-  return text.split(/\s+/).slice(0, maxWords).join(" ");
-}
+
 
 /**
  * Picks a ClipDrop background prompt based on whether the product
